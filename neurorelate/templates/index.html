@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}NeuroRelate — AI-Native RDBMS for Enterprise RAG{% endblock %}
+
+{% block content %}
+<div class="animate-fade-up">
+  <!-- Hero Section -->
+  <div style="text-align: center; padding: 3rem 1rem 4rem 1rem; max-width: 860px; margin: 0 auto;">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); padding: 0.35rem 0.9rem; border-radius: 9999px; margin-bottom: 1.5rem;">
+      <i data-lucide="zap" style="width: 14px; height: 14px; color: #60a5fa;"></i>
+      <span style="font-size: 0.82rem; font-weight: 600; color: #93c5fd; letter-spacing: 0.04em;">NEXT-GEN ENTERPRISE RAG ARCHITECTURE</span>
+    </div>
+
+    <h1 style="font-size: 3.25rem; line-height: 1.15; margin-bottom: 1.25rem; background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+      AI-Native RDBMS for Enterprise Knowledge & RAG
+    </h1>
+
+    <p style="font-size: 1.18rem; color: #94a3b8; margin-bottom: 2.25rem; line-height: 1.6;">
+      Ingest documents, segment them into relational chunks with foreign-key integrity, and perform hybrid retrieval with cited AI question answering.
+    </p>
+
+    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+      <a href="{{ url_for('upload_page') }}" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+        <i data-lucide="upload-cloud" style="width: 20px; height: 20px;"></i>
+        <span>Ingest Documents</span>
+      </a>
+      <a href="{{ url_for('chat_page') }}" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+        <i data-lucide="message-square" style="width: 20px; height: 20px;"></i>
+        <span>Chat with Knowledge Base</span>
+      </a>
+      <a href="{{ url_for('database_page') }}" class="btn btn-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+        <i data-lucide="table" style="width: 20px; height: 20px;"></i>
+        <span>Explore Database</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Live Metrics Banner -->
+  <div class="grid grid-cols-4" style="margin-bottom: 3.5rem;">
+    <div class="card" style="text-align: center; border-left: 4px solid var(--primary);">
+      <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Documents Stored</div>
+      <div style="font-size: 2.4rem; font-weight: 800; color: #fff; margin: 0.35rem 0;">{{ stats.total_docs }}</div>
+      <div style="font-size: 0.78rem; color: #60a5fa;">Relational metadata indexed</div>
+    </div>
+
+    <div class="card" style="text-align: center; border-left: 4px solid var(--accent);">
+      <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Indexed Chunks</div>
+      <div style="font-size: 2.4rem; font-weight: 800; color: #fff; margin: 0.35rem 0;">{{ stats.total_chunks }}</div>
+      <div style="font-size: 0.78rem; color: #c084fc;">FK mapped to parent docs</div>
+    </div>
+
+    <div class="card" style="text-align: center; border-left: 4px solid var(--success);">
+      <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">AI Queries Served</div>
+      <div style="font-size: 2.4rem; font-weight: 800; color: #fff; margin: 0.35rem 0;">{{ stats.total_queries }}</div>
+      <div style="font-size: 0.78rem; color: #34d399;">Grounded with citations</div>
+    </div>
+
+    <div class="card" style="text-align: center; border-left: 4px solid var(--warning);">
+      <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Database Engine</div>
+      <div style="font-size: 1.8rem; font-weight: 800; color: #fff; margin: 0.65rem 0;">{{ stats.db_engine }}</div>
+      <div style="font-size: 0.78rem; color: #fbbf24;">ACID transactional storage</div>
+    </div>
+  </div>
+
+  <!-- Key Architecture Features -->
+  <div style="margin-bottom: 4rem;">
+    <div style="text-align: center; margin-bottom: 2.5rem;">
+      <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem;">Why an RDBMS for RAG?</h2>
+      <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Combining the strict relational schema guarantees of SQL with the semantic capabilities of AI retrieval.</p>
+    </div>
+
+    <div class="grid grid-cols-3">
+      <div class="card">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+          <i data-lucide="layers" style="color: #60a5fa; width: 22px; height: 22px;"></i>
+        </div>
+        <h3 class="card-title">Relational Chunking & Cascade</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Documents and their semantic chunks are stored in normalized tables linked with <code class="font-mono">FOREIGN KEY ... ON DELETE CASCADE</code>, preventing orphaned chunks when files are modified or deleted.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(139, 92, 246, 0.15); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+          <i data-lucide="search" style="color: #c084fc; width: 22px; height: 22px;"></i>
+        </div>
+        <h3 class="card-title">Hybrid Retrieval Engine</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Multi-stage retrieval evaluates exact phrases, TF-IDF keyword density, and token overlap coverage across chunks, returning rank-ordered context within milliseconds.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+          <i data-lucide="shield-check" style="color: #34d399; width: 22px; height: 22px;"></i>
+        </div>
+        <h3 class="card-title">Cited & Grounded Answers</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Every AI-generated answer strictly references the originating document filename and chunk number, providing full provenance and preventing hallucinations in enterprise workflows.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Workflow Steps -->
+  <div class="card" style="padding: 2.5rem; margin-bottom: 4rem; background: linear-gradient(180deg, #111827 0%, #0d1322 100%);">
+    <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem; text-align: center;">How NeuroRelate Works</h2>
+    
+    <div class="grid grid-cols-4" style="position: relative;">
+      <div style="text-align: center;">
+        <div style="width: 50px; height: 50px; border-radius: 50%; background: #1e293b; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; font-weight: 700; color: #fff;">1</div>
+        <h4 style="margin-bottom: 0.4rem;">Ingest</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Upload PDFs, TXT, or markdown. Text is cleanly extracted and sanitized.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <div style="width: 50px; height: 50px; border-radius: 50%; background: #1e293b; border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; font-weight: 700; color: #fff;">2</div>
+        <h4 style="margin-bottom: 0.4rem;">Relational Chunk</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Intelligent chunking with sentence boundary preservation inserted into RDBMS tables.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <div style="width: 50px; height: 50px; border-radius: 50%; background: #1e293b; border: 2px solid var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; font-weight: 700; color: #fff;">3</div>
+        <h4 style="margin-bottom: 0.4rem;">Hybrid Retrieve</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">SQL queries filter and rank the top-k chunks based on semantic relevance scores.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <div style="width: 50px; height: 50px; border-radius: 50%; background: #1e293b; border: 2px solid var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; font-weight: 700; color: #fff;">4</div>
+        <h4 style="margin-bottom: 0.4rem;">Synthesize & Audit</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">AI synthesizes the answer with provenance citations, stored in query history.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Action Callouts -->
+  <div class="grid grid-cols-2" style="margin-bottom: 2rem;">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <i data-lucide="file-text" style="color: #60a5fa; width: 22px; height: 22px;"></i>
+          <h3>Ready to index enterprise knowledge?</h3>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+          Upload manuals, project reports, technical documentations, or study materials to immediately begin querying.
+        </p>
+      </div>
+      <a href="{{ url_for('upload_page') }}" class="btn btn-primary" style="width: fit-content;">
+        <i data-lucide="arrow-up-right" style="width: 16px; height: 16px;"></i>
+        <span>Go to Ingestion Zone</span>
+      </a>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <i data-lucide="terminal" style="color: #c084fc; width: 22px; height: 22px;"></i>
+          <h3>Inspect the Database Tables</h3>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+          Run live SQL queries, check table relationships, and examine raw chunk vectors directly from the web console.
+        </p>
+      </div>
+      <a href="{{ url_for('database_page') }}" class="btn btn-secondary" style="width: fit-content;">
+        <i data-lucide="terminal" style="width: 16px; height: 16px;"></i>
+        <span>Open SQL Console</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

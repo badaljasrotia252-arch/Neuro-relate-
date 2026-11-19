@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Database Explorer — NeuroRelate RDBMS{% endblock %}
+
+{% block content %}
+<div class="animate-fade-up">
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">RDBMS Architecture & Query Console</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Direct schema inspection, relational integrity validation, and interactive SQL query runner.</p>
+  </div>
+
+  <!-- Tables Status Overview -->
+  <div class="grid grid-cols-3" style="margin-bottom: 2.5rem;">
+    <div class="card" style="border-top: 3px solid #3b82f6;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <span class="font-mono" style="font-weight: 700; color: #60a5fa; font-size: 1.1rem;">documents</span>
+        <span class="badge badge-blue">Parent Table</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+        Stores master document records, binary sizes, timestamp, and full extracted raw text.
+      </p>
+      <div style="font-size: 0.8rem; color: #94a3b8; font-family: var(--font-mono); background: #0b0f19; padding: 0.6rem; border-radius: 6px;">
+        id (PK) | filename | upload_date | file_size | chunk_count | extracted_text
+      </div>
+    </div>
+
+    <div class="card" style="border-top: 3px solid #8b5cf6;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <span class="font-mono" style="font-weight: 700; color: #c084fc; font-size: 1.1rem;">document_chunks</span>
+        <span class="badge badge-purple">Child Relation</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+        Normalized text segments linked via Foreign Key with cascading delete rules.
+      </p>
+      <div style="font-size: 0.8rem; color: #94a3b8; font-family: var(--font-mono); background: #0b0f19; padding: 0.6rem; border-radius: 6px;">
+        id (PK) | document_id (FK &rarr; documents.id) | chunk_text | chunk_number
+      </div>
+    </div>
+
+    <div class="card" style="border-top: 3px solid #10b981;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <span class="font-mono" style="font-weight: 700; color: #34d399; font-size: 1.1rem;">query_history</span>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Audit Table</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+        Chronological audit log of user prompts, generated AI answers, and source citations.
+      </p>
+      <div style="font-size: 0.8rem; color: #94a3b8; font-family: var(--font-mono); background: #0b0f19; padding: 0.6rem; border-radius: 6px;">
+        id (PK) | question | answer | source_document | created_at
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive SQL Console -->
+  <div class="card" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 class="card-title">
+        <i data-lucide="terminal" style="width: 18px; height: 18px; color: #60a5fa;"></i>
+        <span>Live SQL Query Console</span>
+      </h3>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button onclick="setSql('SELECT id, filename, upload_date, chunk_count, file_size FROM documents ORDER BY id DESC;')" class="btn btn-secondary btn-sm">
+          SELECT documents
+        </button>
+        <button onclick="setSql('SELECT c.id, d.filename, c.chunk_number, c.chunk_text FROM document_chunks c JOIN documents d ON c.document_id = d.id LIMIT 10;')" class="btn btn-secondary btn-sm">
+          JOIN Chunks &amp; Docs
+        </button>
+        <button onclick="setSql('SELECT id, question, answer, source_document, created_at FROM query_history ORDER BY id DESC LIMIT 10;')" class="btn btn-secondary btn-sm">
+          SELECT query_history
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <textarea id="sql-input" class="textarea font-mono" rows="3" style="font-size: 0.9rem;" placeholder="Write a SELECT or EXPLAIN query...">SELECT id, filename, upload_date, chunk_count, file_size FROM documents ORDER BY id DESC;</textarea>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">
+        Security Guard: Read-only statements (<code class="font-mono">SELECT</code>, <code class="font-mono">EXPLAIN</code>) are permitted.
+      </span>
+      <button onclick="runSql()" class="btn btn-primary">
+        <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+        <span>Execute Query</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Query Output Results Table -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 class="card-title">
+        <i data-lucide="table" style="width: 18px; height: 18px; color: #34d399;"></i>
+        <span>Execution Output</span>
+      </h3>
+      <span id="query-meta" style="font-size: 0.82rem; color: var(--text-muted);"></span>
+    </div>
+
+    <div id="query-result-container" class="table-container">
+      <div style="text-align: center; color: var(--text-muted); padding: 3rem;">
+        Execute a query to view tabular data from the active RDBMS engine.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sqlInput = document.getElementById('sql-input');
+const queryMeta = document.getElementById('query-meta');
+const resultContainer = document.getElementById('query-result-container');
+
+function setSql(sql) {
+  sqlInput.value = sql;
+  runSql();
+}
+
+async function runSql() {
+  const query = sqlInput.value.trim();
+  if (!query) return;
+
+  resultContainer.innerHTML = `
+    <div style="text-align: center; padding: 2.5rem; color: #60a5fa;">
+      <div class="db-pulse" style="margin: 0 auto 0.75rem auto;"></div>
+      <span>Executing SQL query...</span>
+    </div>
+  `;
+
+  const startTime = performance.now();
+
+  try {
+    const res = await fetch('/api/database/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query })
+    });
+    const data = await res.json();
+    const duration = Math.round(performance.now() - startTime);
+
+    if (!res.ok) {
+      queryMeta.innerText = `Error`;
+      resultContainer.innerHTML = `
+        <div style="padding: 1.5rem; color: #f87171; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+          <strong>SQL Error:</strong> ${escapeHtml(data.error || 'Execution failed')}
+        </div>
+      `;
+      return;
+    }
+
+    const cols = data.columns || [];
+    const rows = data.rows || [];
+
+    queryMeta.innerText = `${rows.length} rows returned in ${duration} ms`;
+
+    if (cols.length === 0 || rows.length === 0) {
+      resultContainer.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          Query returned zero rows.
+        </div>
+      `;
+      return;
+    }
+
+    const headerHtml = cols.map(c => `<th>${escapeHtml(c)}</th>`).join('');
+    const rowsHtml = rows.map(r => `
+      <tr>
+        ${r.map(cell => `<td class="font-mono" style="font-size: 0.85rem; max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(String(cell !== null ? cell : 'NULL'))}</td>`).join('')}
+      </tr>
+    `).join('');
+
+    resultContainer.innerHTML = `
+      <table>
+        <thead>
+          <tr>${headerHtml}</tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    resultContainer.innerHTML = `
+      <div style="padding: 1.5rem; color: #f87171;">
+        Failed to execute query via network request.
+      </div>
+    `;
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Auto-run initial query on page load
+window.addEventListener('DOMContentLoaded', () => {
+  runSql();
+});
+</script>
+{% endblock %}

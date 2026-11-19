@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NeuroRelate — AI-Native RDBMS for Enterprise RAG{% endblock %}</title>
+  <meta name="description" content="NeuroRelate — An enterprise-grade AI-native relational database management system for Retrieval-Augmented Generation (RAG).">
+  <!-- Tailwind CSS & Custom Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="hero-glow">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="{{ url_for('home') }}" class="nav-brand">
+      <div class="brand-icon">
+        <i data-lucide="database" style="color: white; width: 20px; height: 20px;"></i>
+      </div>
+      <div>
+        <span>NeuroRelate</span>
+        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 500; display: block; line-height: 1;">AI-Native RDBMS</span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="{{ url_for('home') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
+      <li><a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">Dashboard</a></li>
+      <li><a href="{{ url_for('upload_page') }}" class="nav-link {% if request.path == '/upload' %}active{% endif %}">Ingest Docs</a></li>
+      <li><a href="{{ url_for('chat_page') }}" class="nav-link {% if request.path == '/chat' %}active{% endif %}">AI Chat</a></li>
+      <li><a href="{{ url_for('search_page') }}" class="nav-link {% if request.path == '/search' %}active{% endif %}">Search</a></li>
+      <li><a href="{{ url_for('database_page') }}" class="nav-link {% if request.path == '/database' %}active{% endif %}">Database Explorer</a></li>
+      <li><a href="{{ url_for('about_page') }}" class="nav-link {% if request.path == '/about' %}active{% endif %}">Architecture</a></li>
+    </ul>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div class="db-badge" title="Active RDBMS backend">
+        <span class="db-pulse"></span>
+        <span>{{ db_engine }} ENGINE</span>
+      </div>
+      <a href="{{ url_for('chat_page') }}" class="btn btn-primary btn-sm">
+        <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+        <span>Ask AI</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content Body -->
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-weight: 700; color: #fff;">NeuroRelate</span>
+        <span>&bull; Enterprise RAG Relational Engine</span>
+      </div>
+      <div>
+        <span>Storage: <strong>{{ db_engine }}</strong></span> | 
+        <span>Chunking: <strong>Paragraph-Aware</strong></span> | 
+        <span>Retrieval: <strong>Hybrid BM25+Vector</strong></span>
+      </div>
+      <div>
+        &copy; {{ year }} NeuroRelate Systems. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification Root -->
+  <div id="toast-container"></div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

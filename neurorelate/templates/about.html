@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Architecture & Schema — NeuroRelate RDBMS{% endblock %}
+
+{% block content %}
+<div class="animate-fade-up">
+  <div style="margin-bottom: 2.5rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">System Architecture & Schema</h1>
+    <p style="color: var(--text-muted); font-size: 1.05rem;">
+      Deep dive into NeuroRelate's relational data model, ACID-compliant storage strategy, and hybrid retrieval-augmented generation engine.
+    </p>
+  </div>
+
+  <!-- Tech Stack Highlights -->
+  <div class="grid grid-cols-4" style="margin-bottom: 3rem;">
+    <div class="card" style="text-align: center;">
+      <i data-lucide="database" style="color: #60a5fa; width: 28px; height: 28px; margin: 0 auto 0.75rem auto;"></i>
+      <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Relational Engine</h4>
+      <p style="color: var(--text-muted); font-size: 0.82rem;">MySQL 8.0 with automatic SQLite resilient fallback</p>
+    </div>
+
+    <div class="card" style="text-align: center;">
+      <i data-lucide="cpu" style="color: #c084fc; width: 28px; height: 28px; margin: 0 auto 0.75rem auto;"></i>
+      <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">AI Generation</h4>
+      <p style="color: var(--text-muted); font-size: 0.82rem;">Google Gemini API (gemini-2.5-flash) & Extractive Fallback</p>
+    </div>
+
+    <div class="card" style="text-align: center;">
+      <i data-lucide="file-search" style="color: #34d399; width: 28px; height: 28px; margin: 0 auto 0.75rem auto;"></i>
+      <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Parser & Extraction</h4>
+      <p style="color: var(--text-muted); font-size: 0.82rem;">PyMuPDF (fitz), PyPDF, & structured plain-text readers</p>
+    </div>
+
+    <div class="card" style="text-align: center;">
+      <i data-lucide="shield" style="color: #fbbf24; width: 28px; height: 28px; margin: 0 auto 0.75rem auto;"></i>
+      <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">ACID Guarantees</h4>
+      <p style="color: var(--text-muted); font-size: 0.82rem;">Cascading foreign keys, rollback on failure, index optimization</p>
+    </div>
+  </div>
+
+  <!-- Relational Schema Section -->
+  <div class="card" style="margin-bottom: 3rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+      <div class="brand-icon" style="width: 30px; height: 30px;">
+        <i data-lucide="table" style="color: white; width: 16px; height: 16px;"></i>
+      </div>
+      <h2>Relational Entity-Relationship (ER) Model</h2>
+    </div>
+
+    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+      NeuroRelate models unstructured document ingestion as a normalized 1-to-N relational structure. When documents are ingested, parent metadata is stored in <code class="font-mono">documents</code>, and extracted text is segmented into chunks stored in <code class="font-mono">document_chunks</code> tied by foreign keys.
+    </p>
+
+    <!-- Schema Code Blocks -->
+    <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
+      <div style="background: #090d16; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem;">
+        <h4 class="font-mono" style="color: #60a5fa; font-size: 0.95rem; margin-bottom: 0.75rem;">Table: documents</h4>
+        <pre class="font-mono" style="color: #cbd5e1; font-size: 0.82rem; line-height: 1.6;">
+CREATE TABLE documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  filename VARCHAR(255) NOT NULL,
+  upload_date DATETIME NOT NULL,
+  extracted_text LONGTEXT,
+  file_size INT DEFAULT 0,
+  chunk_count INT DEFAULT 0
+);</pre>
+      </div>
+
+      <div style="background: #090d16; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem;">
+        <h4 class="font-mono" style="color: #c084fc; font-size: 0.95rem; margin-bottom: 0.75rem;">Table: document_chunks</h4>
+        <pre class="font-mono" style="color: #cbd5e1; font-size: 0.82rem; line-height: 1.6;">
+CREATE TABLE document_chunks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  document_id INT NOT NULL,
+  chunk_text TEXT NOT NULL,
+  chunk_number INT NOT NULL,
+  FOREIGN KEY (document_id) 
+    REFERENCES documents(id) 
+    ON DELETE CASCADE
+);</pre>
+      </div>
+    </div>
+
+    <div style="background: #090d16; border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem;">
+      <h4 class="font-mono" style="color: #34d399; font-size: 0.95rem; margin-bottom: 0.75rem;">Table: query_history (Telemetry & Audit)</h4>
+      <pre class="font-mono" style="color: #cbd5e1; font-size: 0.82rem; line-height: 1.6;">
+CREATE TABLE query_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  source_document VARCHAR(255),
+  created_at DATETIME NOT NULL
+);</pre>
+    </div>
+  </div>
+
+  <!-- Endpoints API Reference -->
+  <div class="card" style="margin-bottom: 3rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+      <div class="brand-icon" style="width: 30px; height: 30px; background: linear-gradient(135deg, #10b981, #059669);">
+        <i data-lucide="code" style="color: white; width: 16px; height: 16px;"></i>
+      </div>
+      <h2>RESTful API Reference</h2>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Payload / Query</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge" style="background: #065f46; color: #6ee7b7;">POST</span></td>
+            <td class="font-mono">/api/documents/upload</td>
+            <td>multipart/form-data <code class="font-mono">file</code></td>
+            <td>Ingests document, extracts text, chunks, and commits to RDBMS</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">GET</span></td>
+            <td class="font-mono">/api/documents</td>
+            <td>—</td>
+            <td>Lists all documents with chunk counts and metadata</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">GET</span></td>
+            <td class="font-mono">/api/documents/&lt;id&gt;/chunks</td>
+            <td>—</td>
+            <td>Returns all chunks for a specific document</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: #7f1d1d; color: #fca5a5;">DELETE</span></td>
+            <td class="font-mono">/api/documents/&lt;id&gt;</td>
+            <td>—</td>
+            <td>Cascading delete of document record, chunks, and disk file</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: #065f46; color: #6ee7b7;">POST</span></td>
+            <td class="font-mono">/api/search</td>
+            <td>JSON <code class="font-mono">{query, top_k, doc_id}</code></td>
+            <td>Hybrid BM25 keyword and phrase retrieval over chunks</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: #065f46; color: #6ee7b7;">POST</span></td>
+            <td class="font-mono">/api/chat</td>
+            <td>JSON <code class="font-mono">{question, doc_id, top_k}</code></td>
+            <td>Retrieves context, invokes AI model, and saves to query history</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: #065f46; color: #6ee7b7;">POST</span></td>
+            <td class="font-mono">/api/database/query</td>
+            <td>JSON <code class="font-mono">{query}</code></td>
+            <td>Executes safe SELECT query in the live web SQL console</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

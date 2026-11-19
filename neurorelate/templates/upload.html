@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Ingest Documents — NeuroRelate RDBMS{% endblock %}
+
+{% block content %}
+<div class="animate-fade-up">
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">Document Ingestion & Chunking</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Upload unstructured documents into normalized relational tables with automatic text extraction.</p>
+  </div>
+
+  <!-- Upload Card -->
+  <div class="card" style="margin-bottom: 2.5rem;">
+    <div id="dropzone" class="dropzone">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+        <i data-lucide="upload-cloud" style="width: 28px; height: 28px; color: #60a5fa;"></i>
+      </div>
+      <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Drag & drop your files here</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Supports <span style="color: #60a5fa; font-weight: 600;">PDF</span>, <span style="color: #60a5fa; font-weight: 600;">TXT</span>, <span style="color: #60a5fa; font-weight: 600;">Markdown</span>, <span style="color: #60a5fa; font-weight: 600;">CSV</span>, and <span style="color: #60a5fa; font-weight: 600;">JSON</span> (up to 32MB)
+      </p>
+
+      <input type="file" id="file-input" style="display: none;" accept=".pdf,.txt,.md,.csv,.json">
+      <button onclick="document.getElementById('file-input').click()" class="btn btn-primary">
+        <i data-lucide="file-plus" style="width: 16px; height: 16px;"></i>
+        <span>Select File from Computer</span>
+      </button>
+
+      <div id="upload-status" style="display: none; margin-top: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: #60a5fa;">
+          <div class="db-pulse"></div>
+          <span id="upload-status-text" style="font-weight: 600; font-size: 0.95rem;">Ingesting & chunking document...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents Table -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <h3 class="card-title">
+        <i data-lucide="database" style="width: 18px; height: 18px; color: #60a5fa;"></i>
+        <span>Ingested Document Library (<span id="doc-count">{{ documents|length }}</span>)</span>
+      </h3>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Filename</th>
+            <th>Uploaded At</th>
+            <th>Size</th>
+            <th>Chunks</th>
+            <th style="text-align: right;">Operations</th>
+          </tr>
+        </thead>
+        <tbody id="documents-tbody">
+          {% if documents %}
+            {% for doc in documents %}
+            <tr id="doc-row-{{ doc.id }}">
+              <td class="font-mono" style="color: #60a5fa;">#{{ doc.id }}</td>
+              <td style="font-weight: 600; color: #fff;">{{ doc.filename }}</td>
+              <td style="color: var(--text-muted);">{{ doc.upload_date }}</td>
+              <td style="color: var(--text-muted);">{{ doc.file_size }} B</td>
+              <td><span class="badge badge-purple">{{ doc.chunk_count }} chunks</span></td>
+              <td style="text-align: right;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                  <button onclick="viewChunks({{ doc.id }}, '{{ doc.filename }}')" class="btn btn-secondary btn-sm" title="Inspect Chunks">
+                    <i data-lucide="eye" style="width: 13px; height: 13px;"></i>
+                    <span>Inspect</span>
+                  </button>
+                  <a href="{{ url_for('chat_page') }}?doc_id={{ doc.id }}" class="btn btn-primary btn-sm" title="Chat about this document">
+                    <i data-lucide="message-square" style="width: 13px; height: 13px;"></i>
+                    <span>Chat</span>
+                  </a>
+                  <button onclick="deleteDoc({{ doc.id }})" class="btn btn-danger btn-sm" title="Delete">
+                    <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="empty-row">
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                No documents in the database yet. Use the upload box above to ingest files.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Chunk Inspector Modal -->
+<div id="chunks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 1.5rem;">
+  <div class="card" style="width: 100%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; background: #0f172a; border-color: #334155;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+      <div>
+        <h3 id="modal-title" style="font-size: 1.25rem;">Relational Chunks</h3>
+        <p id="modal-subtitle" style="font-size: 0.82rem; color: var(--text-muted);">Inspection of `document_chunks` table</p>
+      </div>
+      <button onclick="closeModal()" class="btn btn-secondary btn-sm" style="padding: 0.3rem 0.6rem;">&times;</button>
+    </div>
+    
+    <div id="modal-chunks-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem; padding-right: 0.5rem;">
+      <!-- Chunks dynamically loaded here -->
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const uploadStatus = document.getElementById('upload-status');
+const uploadStatusText = document.getElementById('upload-status-text');
+
+// Drag and drop event listeners
+['dragenter', 'dragover'].forEach(eventName => {
+  dropzone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropzone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  }, false);
+});
+
+dropzone.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  if (files.length > 0) {
+    handleFileUpload(files[0]);
+  }
+});
+
+fileInput.addEventListener('change', (e) => {
+  if (fileInput.files.length > 0) {
+    handleFileUpload(fileInput.files[0]);
+  }
+});
+
+async function handleFileUpload(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  uploadStatus.style.display = 'block';
+  uploadStatusText.innerText = `Ingesting '${file.name}' into RDBMS...`;
+
+  try {
+    const res = await fetch('/api/documents/upload', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message, 'success');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      showToast(data.error || 'Upload failed', 'error');
+      uploadStatus.style.display = 'none';
+    }
+  } catch (err) {
+    showToast('Network error during upload', 'error');
+    uploadStatus.style.display = 'none';
+  }
+}
+
+async function viewChunks(docId, filename) {
+  const modal = document.getElementById('chunks-modal');
+  const title = document.getElementById('modal-title');
+  const subtitle = document.getElementById('modal-subtitle');
+  const list = document.getElementById('modal-chunks-list');
+
+  title.innerText = `Relational Chunks: ${filename}`;
+  subtitle.innerText = `Querying document_chunks WHERE document_id = ${docId}`;
+  list.innerHTML = `<div style="text-align: center; padding: 2rem; color: #94a3b8;">Loading chunks...</div>`;
+  modal.style.display = 'flex';
+
+  try {
+    const res = await fetch(`/api/documents/${docId}/chunks`);
+    const chunks = await res.json();
+    if (!chunks || chunks.length === 0) {
+      list.innerHTML = `<div style="text-align: center; padding: 2rem; color: #94a3b8;">No chunks found for this document.</div>`;
+      return;
+    }
+
+    list.innerHTML = chunks.map(c => `
+      <div style="background: #1e293b; border-radius: 8px; padding: 1rem; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span class="badge badge-purple">Chunk #${c.chunk_number} (Record ID: ${c.id})</span>
+          <span style="font-size: 0.75rem; color: #94a3b8;">${c.chunk_text.length} chars</span>
+        </div>
+        <div style="font-size: 0.88rem; color: #e2e8f0; white-space: pre-wrap; line-height: 1.5; font-family: var(--font-sans);">${escapeHtml(c.chunk_text)}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    list.innerHTML = `<div style="color: #f87171; padding: 1rem;">Failed to load chunks.</div>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('chunks-modal').style.display = 'none';
+}
+
+async function deleteDoc(docId) {
+  if (!confirm("Are you sure? Cascading foreign keys will delete all related chunks.")) return;
+  try {
+    const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast("Document deleted", "success");
+      document.getElementById(`doc-row-${docId}`).remove();
+    } else {
+      const data = await res.json();
+      showToast(data.error || "Failed to delete", "error");
+    }
+  } catch (err) {
+    showToast("Error deleting", "error");
+  }
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+</script>
+{% endblock %}

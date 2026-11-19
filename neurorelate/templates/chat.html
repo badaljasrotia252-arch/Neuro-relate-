@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}AI Chat — Grounded Enterprise RAG{% endblock %}
+
+{% block content %}
+<div class="animate-fade-up">
+  <div style="display: flex; gap: 1.5rem; height: calc(100vh - 180px); min-height: 620px;">
+    <!-- Sidebar: Context & Queries -->
+    <div style="width: 320px; display: flex; flex-direction: column; gap: 1.25rem;">
+      <!-- Knowledge Filter -->
+      <div class="card" style="padding: 1.25rem;">
+        <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="filter" style="width: 15px; height: 15px; color: #60a5fa;"></i>
+          <span>Knowledge Scope</span>
+        </h4>
+        <select id="doc-filter" class="select" style="font-size: 0.88rem;">
+          <option value="">All Ingested Documents (Broad RAG)</option>
+          {% for doc in documents %}
+          <option value="{{ doc.id }}">{{ doc.filename }}</option>
+          {% endfor %}
+        </select>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">AI Inference:</span>
+          <button onclick="openKeyModal()" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+            ⚙️ API Key
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Prompts -->
+      <div class="card" style="padding: 1.25rem; flex: 1; overflow-y: auto;">
+        <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="compass" style="width: 15px; height: 15px; color: #c084fc;"></i>
+          <span>Suggested Questions</span>
+        </h4>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <button onclick="setQuery('Summarize the document guidelines and synopsis requirements.')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 0.82rem; padding: 0.6rem 0.75rem;">
+            📑 Summarize the document
+          </button>
+          <button onclick="setQuery('What information must be included in the project synopsis?')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 0.82rem; padding: 0.6rem 0.75rem;">
+            📝 Synopsis requirements
+          </button>
+          <button onclick="setQuery('What are the guidelines for project report writing?')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 0.82rem; padding: 0.6rem 0.75rem;">
+            📐 Report formatting rules
+          </button>
+          <button onclick="setQuery('What are the certificate and declaration requirements?')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 0.82rem; padding: 0.6rem 0.75rem;">
+            📜 Certificate & bonafide details
+          </button>
+          <button onclick="setQuery('Explain how the database schema and relational tables are structured.')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 0.82rem; padding: 0.6rem 0.75rem;">
+            🗄️ Database architecture
+          </button>
+        </div>
+
+        {% if recent_queries %}
+        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <h5 style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Recent Inquiries</h5>
+          <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+            {% for q in recent_queries[:4] %}
+            <div onclick="setQuery('{{ q.question }}')" style="font-size: 0.78rem; color: #94a3b8; cursor: pointer; padding: 0.35rem; border-radius: 4px; background: rgba(30, 41, 59, 0.4);" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">
+              💬 {{ q.question[:40] }}...
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Main Chat Window -->
+    <div class="chat-window" style="flex: 1;">
+      <!-- Chat Header -->
+      <div style="padding: 0.85rem 1.25rem; background: #0d1322; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="db-pulse"></div>
+          <span style="font-weight: 700; font-size: 0.95rem;">NeuroRelate Grounded Assistant</span>
+          <span class="badge badge-blue">RAG Mode Active</span>
+        </div>
+        <button onclick="clearChat()" class="btn btn-secondary btn-sm" style="font-size: 0.78rem;">
+          <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
+          <span>Clear Chat</span>
+        </button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chat-messages" class="chat-messages">
+        <!-- Welcome Message -->
+        <div class="chat-bubble ai">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: #60a5fa; font-weight: 600; font-size: 0.85rem;">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+            <span>NeuroRelate Enterprise Assistant</span>
+          </div>
+          <div class="bubble-text" style="font-size: 0.95rem; line-height: 1.6; color: #f1f5f9;">
+            Hello! I am connected to your AI-native relational database. Ask me any question about your uploaded documents, and I will search the relational chunks, retrieve grounded context, and formulate a cited response.
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <input type="text" id="chat-input" class="input" placeholder="Ask a question about your documents..." autocomplete="off">
+        <button id="send-btn" onclick="sendMessage()" class="btn btn-primary" style="padding: 0 1.5rem;">
+          <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+          <span>Send</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Key Configuration Modal -->
+<div id="key-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 1.5rem;">
+  <div class="card" style="width: 100%; max-width: 500px; background: #0f172a; border-color: #334155;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="key" style="color: #60a5fa; width: 18px; height: 18px;"></i>
+        <span>Configure Gemini API Key</span>
+      </h3>
+      <button onclick="closeKeyModal()" class="btn btn-secondary btn-sm">&times;</button>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+      Enter your Google Gemini API key to enable full generative AI answers with deep reasoning. If left empty, NeuroRelate uses its built-in local extractive RAG engine.
+    </p>
+    <div style="margin-bottom: 1.25rem;">
+      <input type="password" id="gemini-key-input" class="input font-mono" placeholder="AIzaSy..." style="font-size: 0.85rem;">
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+      <button onclick="closeKeyModal()" class="btn btn-secondary btn-sm">Cancel</button>
+      <button onclick="saveApiKey()" class="btn btn-primary btn-sm">Save & Apply</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const preselectDocId = urlParams.get('doc_id');
+if (preselectDocId) {
+  const select = document.getElementById('doc-filter');
+  if (select) select.value = preselectDocId;
+}
+
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const docFilter = document.getElementById('doc-filter');
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+function setQuery(text) {
+  chatInput.value = text;
+  chatInput.focus();
+}
+
+function clearChat() {
+  chatMessages.innerHTML = `
+    <div class="chat-bubble ai">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: #60a5fa; font-weight: 600; font-size: 0.85rem;">
+        <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+        <span>NeuroRelate Enterprise Assistant</span>
+      </div>
+      <div class="bubble-text" style="font-size: 0.95rem; line-height: 1.6; color: #f1f5f9;">
+        Chat history cleared. What would you like to investigate next?
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+async function sendMessage() {
+  const question = chatInput.value.trim();
+  if (!question) return;
+
+  const docId = docFilter.value || null;
+
+  appendUserMessage(question);
+  chatInput.value = '';
+  chatInput.disabled = true;
+  sendBtn.disabled = true;
+
+  const typingId = appendTypingIndicator();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: question,
+        doc_id: docId,
+        top_k: 5
+      })
+    });
+
+    const data = await res.json();
+    removeElement(typingId);
+
+    if (res.ok) {
+      appendAiMessage(data.answer, data.sources, data.chunks);
+    } else {
+      appendAiMessage(`Error: ${data.error || 'Failed to process question'}`, []);
+    }
+  } catch (err) {
+    removeElement(typingId);
+    appendAiMessage("Network communication error with RDBMS backend.", []);
+  } finally {
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+    chatInput.focus();
+  }
+}
+
+function appendUserMessage(text) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble user';
+  bubble.innerText = text;
+  chatMessages.appendChild(bubble);
+  scrollToBottom();
+}
+
+function appendTypingIndicator() {
+  const id = 'typing-' + Date.now();
+  const bubble = document.createElement('div');
+  bubble.id = id;
+  bubble.className = 'chat-bubble ai';
+  bubble.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 0.5rem; color: #60a5fa;">
+      <div class="db-pulse"></div>
+      <span style="font-size: 0.85rem;">Retrieving relational chunks & synthesizing answer...</span>
+    </div>
+  `;
+  chatMessages.appendChild(bubble);
+  scrollToBottom();
+  return id;
+}
+
+function parseMarkdown(md) {
+  if (!md) return '';
+  let html = escapeHtml(md);
+  
+  // Headings
+  html = html.replace(/^### (.*$)/gim, '<h4 style="color:#60a5fa; margin: 0.75rem 0 0.35rem 0; font-size: 1.05rem;">$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3 style="color:#93c5fd; margin: 0.85rem 0 0.4rem 0; font-size: 1.15rem;">$1</h3>');
+  
+  // Bold & Italic
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #ffffff;">$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em style="color: #cbd5e1;">$1</em>');
+  
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code class="font-mono" style="background: rgba(30,41,59,0.7); color: #93c5fd; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem;">$1</code>');
+  
+  // Bullet points
+  html = html.replace(/^\s*-\s+(.*$)/gim, '<div style="display: flex; gap: 0.5rem; margin-bottom: 0.35rem;"><span style="color: #60a5fa;">&bull;</span><span>$1</span></div>');
+  
+  // Horizontal rules
+  html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 0.75rem 0;">');
+  
+  // Convert remaining newlines
+  html = html.replace(/\n\n/g, '<div style="height: 0.5rem;"></div>');
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
+function appendAiMessage(answer, sources, chunks) {
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ai';
+
+  let sourcesHtml = '';
+  if (sources && sources.length > 0) {
+    const badges = sources.map(s => `<span class="badge badge-blue">📄 ${escapeHtml(s)}</span>`).join(' ');
+    sourcesHtml = `
+      <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Grounded Sources:</span>
+        ${badges}
+      </div>
+    `;
+  }
+
+  const formattedAnswer = parseMarkdown(answer);
+
+  bubble.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #60a5fa; font-weight: 600; font-size: 0.85rem;">
+        <i data-lucide="bot" style="width: 14px; height: 14px;"></i>
+        <span>NeuroRelate Response</span>
+      </div>
+      <button onclick="copyAnswerText(this)" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" title="Copy to clipboard">
+        Copy
+      </button>
+    </div>
+    <div class="bubble-text" style="font-size: 0.95rem; line-height: 1.6; color: #f1f5f9;">
+      ${formattedAnswer}
+    </div>
+    ${sourcesHtml}
+  `;
+
+  chatMessages.appendChild(bubble);
+  lucide.createIcons();
+  scrollToBottom();
+}
+
+function copyAnswerText(btn) {
+  const bubble = btn.closest('.chat-bubble');
+  const textEl = bubble ? bubble.querySelector('.bubble-text') : null;
+  if (textEl) {
+    copyToClipboard(textEl.innerText, 'Answer copied to clipboard!');
+  }
+}
+
+function removeElement(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function scrollToBottom() {
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function openKeyModal() {
+  document.getElementById('key-modal').style.display = 'flex';
+}
+
+function closeKeyModal() {
+  document.getElementById('key-modal').style.display = 'none';
+}
+
+async function saveApiKey() {
+  const key = document.getElementById('gemini-key-input').value.trim();
+  try {
+    const res = await fetch('/api/settings/apikey', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key })
+    });
+    if (res.ok) {
+      showToast('Gemini API key configured!', 'success');
+      closeKeyModal();
+    } else {
+      showToast('Failed to save API key', 'error');
+    }
+  } catch (err) {
+    showToast('Network error saving API key', 'error');
+  }
+}
+</script>
+{% endblock %}

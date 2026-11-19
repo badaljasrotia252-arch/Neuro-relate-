@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+*.sqlite3
+
+# Virtual Environments
+venv/
+env/
+ENV/
+
+# Uploads
+neurorelate/static/uploads/*
+!neurorelate/static/uploads/.gitkeep
+
+# IDE & Editor files
+.vscode/
+.idea/
+.DS_Store
